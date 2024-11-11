@@ -1,5 +1,5 @@
 export type TCategory = {
-  childrenCategory: TChildrenCategory[];
+  childrenCategories: TChildrenCategory[];
   code: number;
   description: string;
   id: string;

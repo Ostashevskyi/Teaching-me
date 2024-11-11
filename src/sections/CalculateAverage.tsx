@@ -1,65 +1,19 @@
-import React, { useState } from "react";
-import { TCategory } from "../types/Category";
-import { TTeacher, TTeachersGeneral } from "../types/Teacher";
+import { useState } from "react";
+
+import { fetchTeachers } from "../api/fetchTeachers";
+import { fetchCategories } from "../api/fetchCategories";
+import { fetchAveragePrice } from "../api/fetchAveragePrice";
+
 import Button from "../components/Buttons/Button";
+
+import { TTeacherOwnObject, TTeachersGeneral } from "../types/Teacher";
+
+import { calculateAveragePrice } from "../utils/calculateAverangePrice";
 
 const CalculateAverage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const fetchCategories = async (): Promise<TCategory[]> => {
-    const res = await fetch(
-      "https://test.teaching-me.org/categories/v1/open/categories",
-      {
-        method: "GET",
-        headers: {
-          "Accept-Language": "en",
-        },
-      }
-    );
-
-    if (!res.ok) {
-      throw new Error("Error has occured during fetching categories");
-    }
-
-    return res.json();
-  };
-
-  const fetchTeachers = async (
-    codes: number[],
-    page: number,
-    pageSize: number
-  ): Promise<TTeachersGeneral> => {
-    const res = await fetch(
-      "https://test.teaching-me.org/categories/v1/open/search",
-      {
-        method: "POST",
-        headers: {
-          "Accept-Language": "en",
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          categories: codes,
-          page: page,
-          pageSize: pageSize,
-        }),
-      }
-    );
-
-    if (!res.ok) {
-      throw new Error("Error has occured during fetching teachers");
-    }
-
-    const data = (await res.json()) as TTeachersGeneral;
-
-    return data || [];
-  };
-
-  const fetchPrice = async (price: number) => {
-    const res = await fetch(
-      "https://test.teaching-me.org/categories/v1/open/average-price"
-    );
-  };
+  const [isEnd, setIsEnd] = useState(false);
 
   const handleClick = async () => {
     setIsLoading(true);
@@ -67,54 +21,72 @@ const CalculateAverage = () => {
 
     try {
       const categories = await fetchCategories();
-      const codes = categories.map((category) => category.code);
 
-      let allTeachers: TTeacher[] = [];
-      let page = 0;
+      const childrenCategory: TTeacherOwnObject[] = categories
+        .map((category) => category.childrenCategories)
+        .flat()
+        .map((category) => ({
+          name: category.name,
+          code: category.code,
+          teachersCount: category.teachersCount,
+          teachers: [],
+          avgPrice: 0,
+        }));
+
+      let index = 0;
       const pageSize = 10;
-      let hasMoreData = true;
 
-      while (hasMoreData) {
-        const teachers = (await fetchTeachers(
-          codes,
-          page,
-          pageSize
-        )) as TTeachersGeneral;
+      while (index < childrenCategory.length) {
+        const category = childrenCategory[index];
+        const pages = Math.ceil(category.teachersCount / pageSize);
+        let page = 0;
 
-        if (teachers.teachers && teachers.teachers.length > 0) {
-          allTeachers = allTeachers.concat(teachers.teachers);
+        while (page < pages) {
+          const teachers = (await fetchTeachers(
+            category.code,
+            page,
+            pageSize
+          )) as TTeachersGeneral;
+
+          category.teachers = [...category.teachers, ...teachers.teachers];
           page++;
-        } else {
-          hasMoreData = false;
         }
 
-        if (allTeachers.length === 0) {
-          setError("No teachers found");
-          return;
-        }
-
-        const allPrices = allTeachers
-          .map((teacher) => teacher.pricePerHour)
-          .reduce((prevPrice, nextPrice) => prevPrice + nextPrice);
-
-        const avgPrice = Number((allPrices / allTeachers.length).toFixed(2));
+        index++;
       }
+
+      const validChildren = childrenCategory.filter(
+        (teacher) => teacher.teachersCount > 0
+      );
+
+      calculateAveragePrice({
+        filteredArray: validChildren,
+        mainArray: childrenCategory,
+      });
+
+      childrenCategory.forEach((category) => {
+        fetchAveragePrice(category);
+      });
     } catch (error) {
-      setError(error instanceof Error ? error.message : "Error was occurred");
+      setError(error instanceof Error ? error.message : "Error occurred");
     } finally {
       setIsLoading(false);
+      setIsEnd(true);
     }
   };
 
   return (
-    <>
+    <div className="flex flex-col gap-7">
       <Button clickFn={handleClick}>Calculate average price</Button>
-
-      <button onClick={() => fetchTeachers([6], 0, 10)}>f</button>
 
       {isLoading && <p>Calculating...</p>}
       {error && <p>Error: {error}</p>}
-    </>
+      {isEnd && (
+        <p className="max-w-[300px]">
+          Average price calculated sucessfully and send to the database!
+        </p>
+      )}
+    </div>
   );
 };
 

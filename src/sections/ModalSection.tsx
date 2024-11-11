@@ -1,14 +1,15 @@
-import useModal from "../hooks/useModal";
 import Modal from "../components/Modal/Modal";
-import Calendar from "../components/Icons/Calendar";
 import Button from "../components/Buttons/Button";
+import Calendar from "../components/Icons/Calendar";
 import ModalButton from "../components/Buttons/ModalButton";
+
+import useModal from "../hooks/useModal";
 
 const ModalSection = () => {
   const { closeModal, isOpen, openModal } = useModal();
   return (
     <div>
-      <button onClick={openModal}>Open</button>
+      <Button clickFn={openModal}>Open Modal</Button>
       {isOpen && (
         <Modal isOpen={isOpen}>
           <div>
@@ -27,12 +28,12 @@ const ModalSection = () => {
                 <p className="text-xs text-gray-400">18 Dec, 14:50pm, 2022</p>
               </div>
               <div>
-                <Button
-                  clickFn={closeModal}
-                  cn="w-3 h-3 flex items-center justify-center p-3 border border-black rounded-full"
+                <button
+                  onClick={closeModal}
+                  className="w-6 h-6 flex items-center justify-center border border-black rounded-full hover:bg-gray-200/10"
                 >
                   X
-                </Button>
+                </button>
               </div>
             </div>
             <div className="float-right flex gap-3 items-center justify-end">
@@ -43,7 +44,7 @@ const ModalSection = () => {
             </div>
           </div>
         </Modal>
-      )}{" "}
+      )}
     </div>
   );
 };

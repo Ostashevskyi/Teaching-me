@@ -20,3 +20,11 @@ export type TTeachersGeneral = {
   teachers: TTeacher[];
   totalResults: number;
 };
+
+export type TTeacherOwnObject = {
+  name: string;
+  code: number;
+  teachersCount: number;
+  teachers: TTeacher[];
+  avgPrice: number;
+};
